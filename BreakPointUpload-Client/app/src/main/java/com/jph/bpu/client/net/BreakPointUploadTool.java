@@ -1,7 +1,14 @@
 package com.jph.bpu.client.net;
 
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
+import android.util.Log;
 
+import com.jph.bpu.client.callback.RequestCallBack;
+import com.jph.bpu.client.entity.FailInfo;
+import com.jph.bpu.client.entity.SuccessInfo;
+import com.jph.bpu.client.entity.UpdateInfo;
 import com.jph.bpu.client.util.Constant;
 import com.jph.bpu.client.util.GsonUtil;
 import com.jph.bpu.client.util.Utils;
@@ -18,8 +25,10 @@ import com.jph.bpu.client.util.Utils;
 import org.apache.http.params.CoreConnectionPNames;
 //import org.apache.http.params.CoreProtocolPNames;
 //import org.apache.http.util.EntityUtils;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
@@ -35,7 +44,8 @@ import java.util.Map;
  * @author JPH
  * @date 2015-5-8 下午7:03:25
  */
-public class BreakPointUploadUtil {
+public class BreakPointUploadTool {
+	private final String TAG=BreakPointUploadTool.class.getSimpleName();
 	public String CODE = "code";
 	/** 和服务器建立连接 **/
 	public int STATUS_SUCCESS = 0;
@@ -49,6 +59,54 @@ public class BreakPointUploadUtil {
 	private long lPiece = 1024 * 1024 * 10;
 	/** 设置socket 超时时长为60s秒 **/
 	private final int SO_TIMEOUT = 60 * 1000;
+	private RequestCallBack callBack;
+	private Handler mHandler;
+	public BreakPointUploadTool(RequestCallBack callBack,Handler mHandler) {
+		this.callBack = callBack;
+		this.mHandler=mHandler;
+	}
+	public Object uploadFile(String localFilePath) {
+		String startInfo = getStartPos(localFilePath, "pickup");// 向服务器获取要上传文件的起点信息
+		Map<String, Object> tempMap = (Map<String, Object>) GsonUtil
+				.convertJson2Object(startInfo, HashMap.class,
+						GsonUtil.JSON_JAVABEAN);
+		long codeStr = Utils.doubleObjectToLong(tempMap.get("code"));// 返回状态码
+		if (codeStr != 0) {// 网络异常
+			Log.i(TAG, startInfo);
+			return new FailInfo("网络异常",localFilePath);
+		}
+		long strStart = Utils.doubleObjectToLong(tempMap.get("startsize"));// 起点位置
+		long strTot = Utils.doubleObjectToLong(tempMap.get("totsize"));// 总计大小
+		String saveName = (String) tempMap.get("savename");// 服务器保存的文件名
+		Log.i(TAG,"filename:" + saveName);
+		if (codeStr == 0) {// 获取起点位置成功
+			while (true) {
+				Log.i(TAG, "begin upload");
+				String uploadResult = upload(localFilePath,"pickup", saveName,
+						strStart, strTot);
+				Log.i(TAG,"上传返回值:" + uploadResult);
+				Map<String, Object> resultMap = (Map<String, Object>) GsonUtil
+						.convertJson2Object(uploadResult, HashMap.class,
+								GsonUtil.JSON_JAVABEAN);
+				strStart = Utils.doubleObjectToLong(resultMap.get("start"));
+				long uploadResultCode = Utils.doubleObjectToLong(resultMap
+						.get("code"));
+				if (uploadResultCode == 0) {// 本段上传完成
+					if (strStart == -1) {// 此文件的所有部分全部上传完成
+						Log.i(TAG,"upload finished");
+//						if(!TextUtils.isEmpty((String) resultMap.get("path")))picture.setImgpath((String) resultMap.get("path"));//设置此图片在服务器上保存的路径
+						Log.i(TAG,"图片在服务器上保存的路径:"+resultMap.get("path"));
+						return new SuccessInfo(localFilePath, (String) resultMap.get("path"));
+					} else {// 继续上传
+						Log.i(TAG,"continue upload");
+					}
+				} else {// 网络异常
+					break;
+				}
+			}
+		}
+		return new FailInfo("网络异常",localFilePath);
+	}
 	/**
 	 * 获取上传起始点（code: 0 成功！ 1 网球请求异常，请重试！ 2 返回数据失败，请重试！）
 	 *
@@ -63,7 +121,7 @@ public class BreakPointUploadUtil {
 	 * @date 2015-4-28 下午1:57:12
 	 */
 	@SuppressWarnings("unchecked")
-	public String getStartPos(String localFilePath, String strModuleType) {
+	private String getStartPos(String localFilePath, String strModuleType) {
 		HttpURLConnection conn=null;
 		String responseContent = null;
 		Map<String, Object> resulMap = new HashMap<String, Object>();
@@ -133,7 +191,7 @@ public class BreakPointUploadUtil {
 	 * @date 2015-4-28 下午2:12:34
 	 */
 	@SuppressWarnings("unchecked")
-	public String upload(String localFilePath, String strModuleType,
+	private String upload(String localFilePath, String strModuleType,
 						 String strReturnFileName, long strStartSize, long strTotSize) {
 		HttpURLConnection conn=null;
 		String responseContent = null;
@@ -166,20 +224,8 @@ public class BreakPointUploadUtil {
 			conn.setRequestProperty("Content-Range", strRange);
 			conn.setRequestMethod("POST");
 			conn.setDoOutput(true);
-			conn.setRequestProperty("Content-type","multipart/form-data;   boundary=---------------------------7d318fd100112");
-
-			// 把文件一定范围内的字节数据放到字节数组中
-			int iLenght = (int) (lEnd - lStart);
-			byte[] bytes = new byte[iLenght];
-			RandomAccessFile raf = new RandomAccessFile(localFilePath, "r");// 负责读取数据
-			raf.seek(lStart);
-			raf.read(bytes, 0, (int) iLenght);
-			raf.close();
-
-			OutputStream os=conn.getOutputStream();
-			os.write(bytes);
-			os.flush();
-			os.close();
+			conn.setRequestProperty("Content-type", "multipart/form-data;   boundary=---------------------------7d318fd100112");
+			outPutData(conn,lEnd,lStart,localFilePath);
 			if (conn.getResponseCode()==200) {
 				responseContent = Utils.getStringFromInputStream(conn.getInputStream());
 				if (!TextUtils.isEmpty(responseContent)) {
@@ -211,5 +257,42 @@ public class BreakPointUploadUtil {
 			}
 		}
 		return GsonUtil.convertObject2Json(retMap);
+	}
+
+	private void outPutData(HttpURLConnection conn,long lEnd, long lStart, String localFilePath) throws IOException {
+		long fileSize=new File(localFilePath).length();
+		long completeSize=lStart;
+		int bufferLen=1024;//一次读取的文大小
+//		int iLenght = (int) (lEnd - lStart);//本次要上传的文件大小
+		RandomAccessFile raf = new RandomAccessFile(localFilePath, "r");// 负责读取数据
+		raf.seek(lStart);
+		OutputStream os=conn.getOutputStream();
+		byte[] buffer = new byte[bufferLen];
+		int count= (int) ((lEnd - lStart)/bufferLen);
+		for(int i=0;i<count;i++) {
+			if (completeSize>=lEnd)break;
+			raf.read(buffer, 0, bufferLen);
+			os.write(buffer);
+			completeSize+=bufferLen;
+			sendUpdateMessage(fileSize,completeSize);
+		}
+		int lastBufferLen=(int) (lEnd-completeSize);
+		byte[] lastBuffer=new byte[lastBufferLen];
+		raf.read(lastBuffer ,0, lastBufferLen);
+		os.write(lastBuffer);
+		completeSize+=lastBufferLen;
+		sendUpdateMessage(fileSize,completeSize);
+		raf.close();
+		os.flush();
+		os.close();
+	}
+	/**
+	 * 发送更新下载进度的消息
+	 */
+	private void sendUpdateMessage(long fileSize,long completeSize){
+		Message msg=Message.obtain();
+		msg.what=UploadUtil.WHAT_UPDATE;
+		msg.obj=new UpdateInfo(fileSize,completeSize,true);
+		mHandler.sendMessage(msg);
 	}
 }
