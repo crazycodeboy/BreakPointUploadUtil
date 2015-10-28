@@ -1,23 +1,31 @@
 package com.jph.bpu.client.net;
 
+import android.text.TextUtils;
+
 import com.jph.bpu.client.util.Constant;
 import com.jph.bpu.client.util.GsonUtil;
 import com.jph.bpu.client.util.Utils;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
-import org.apache.http.HttpVersion;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.ByteArrayEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
+//import org.apache.http.HttpEntity;
+//import org.apache.http.HttpResponse;
+//import org.apache.http.HttpStatus;
+//import org.apache.http.HttpVersion;
+//import org.apache.http.client.HttpClient;
+//import org.apache.http.client.methods.HttpGet;
+//import org.apache.http.client.methods.HttpPost;
+//import org.apache.http.entity.ByteArrayEntity;
+//import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.CoreConnectionPNames;
-import org.apache.http.params.CoreProtocolPNames;
-import org.apache.http.util.EntityUtils;
+//import org.apache.http.params.CoreProtocolPNames;
+//import org.apache.http.util.EntityUtils;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.io.RandomAccessFile;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -56,16 +64,8 @@ public class BreakPointUploadUtil {
 	 */
 	@SuppressWarnings("unchecked")
 	public String getStartPos(String localFilePath, String strModuleType) {
-		HttpClient httpclient = new DefaultHttpClient(); // 开启一个客户端 HTTP 请求
-		httpclient.getParams().setParameter(
-				CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-		// httpclient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT,CONNECTION_TIMEOUT);//
-		// 设置连接超时时间
-		httpclient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT,
-				SO_TIMEOUT);// 设置socket 超时时间
-		HttpResponse response = null;
-		HttpEntity httpEntity = null;
-		String strResponseContent = null;
+		HttpURLConnection conn=null;
+		String responseContent = null;
 		Map<String, Object> resulMap = new HashMap<String, Object>();
 		try {
 			File file = new File(localFilePath); // 初始化 File
@@ -80,15 +80,12 @@ public class BreakPointUploadUtil {
 							.lastIndexOf('.') + 1)).append("&size=")
 					.append(file.length()).append("&modified=")
 					.append(file.lastModified());
-			HttpGet httpGet = new HttpGet(sbUrl.toString());
-			response = httpclient.execute(httpGet);
-			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-				httpEntity = response.getEntity();
-				if (httpEntity != null) {
-					strResponseContent = EntityUtils.toString(httpEntity,
-							"utf8");
+			conn= (HttpURLConnection) new URL(sbUrl.toString()).openConnection();
+			if (conn.getResponseCode() ==200) {
+				responseContent = Utils.getStringFromInputStream(conn.getInputStream());;
+				if (!TextUtils.isEmpty(responseContent)) {
 					Map<String, Object> map = (Map<String, Object>) GsonUtil
-							.convertJson2Object(strResponseContent,
+							.convertJson2Object(responseContent,
 									HashMap.class, GsonUtil.JSON_JAVABEAN);
 					if (Utils.doubleObjectToLong(map.get("code")) == 1) { // 服务器端处理成功
 						resulMap.put(CODE, STATUS_SUCCESS);
@@ -111,8 +108,8 @@ public class BreakPointUploadUtil {
 			e.printStackTrace();
 			resulMap.put(CODE, STATUS_NETWORK_ERROR);
 		} finally {
-			if (httpclient != null && httpclient.getConnectionManager() != null) {
-				httpclient.getConnectionManager().shutdown();
+			if (conn != null) {
+				conn.disconnect();
 			}
 		}
 		return GsonUtil.convertObject2Json(resulMap);
@@ -138,25 +135,15 @@ public class BreakPointUploadUtil {
 	@SuppressWarnings("unchecked")
 	public String upload(String localFilePath, String strModuleType,
 						 String strReturnFileName, long strStartSize, long strTotSize) {
-		// 定义全局变量
-		HttpClient httpclient = new DefaultHttpClient();// 开启一个客户端 HTTP 请求
-		httpclient.getParams().setParameter(
-				CoreProtocolPNames.PROTOCOL_VERSION, HttpVersion.HTTP_1_1);
-		// httpclient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT,CONNECTION_TIMEOUT);//
-		// 设置连接超时时间
-		httpclient.getParams().setParameter(CoreConnectionPNames.SO_TIMEOUT,
-				SO_TIMEOUT);// 设置socket 超时时间
-		HttpPost httppost = null;
-		HttpResponse response = null;
-		HttpEntity httpEntity = null;
-		String strResponseContent = null;
+		HttpURLConnection conn=null;
+		String responseContent = null;
 		Map<String, Object> map = null;
 		Map<String, Object> retMap = new HashMap<String, Object>();
 		try {
 			StringBuffer sbUrl = new StringBuffer(Constant.strSerUrl);
 			sbUrl.append("upload?saveName=").append(strReturnFileName)
 					.append("&dirtype=").append(strModuleType);
-			httppost = new HttpPost(sbUrl.toString());
+			conn= (HttpURLConnection) new URL(sbUrl.toString()).openConnection();
 
 			// 计算本次上传的范围
 			long lStart = strStartSize;
@@ -176,7 +163,10 @@ public class BreakPointUploadUtil {
 			String strRange = strStartSize + "-" + String.valueOf(lEnd) + "/"
 					+ strTotSize;
 			strRange = "bytes " + strRange;
-			httppost.addHeader("Content-Range", strRange);
+			conn.setRequestProperty("Content-Range", strRange);
+			conn.setRequestMethod("POST");
+			conn.setDoOutput(true);
+			conn.setRequestProperty("Content-type","multipart/form-data;   boundary=---------------------------7d318fd100112");
 
 			// 把文件一定范围内的字节数据放到字节数组中
 			int iLenght = (int) (lEnd - lStart);
@@ -186,17 +176,15 @@ public class BreakPointUploadUtil {
 			raf.read(bytes, 0, (int) iLenght);
 			raf.close();
 
-			ByteArrayEntity bEntity = new ByteArrayEntity(bytes);
-			httppost.setEntity(bEntity);
-
-			response = httpclient.execute(httppost);
-			if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-				httpEntity = response.getEntity();
-				if (httpEntity != null) {
-					strResponseContent = EntityUtils.toString(httpEntity,
-							"utf8");
+			OutputStream os=conn.getOutputStream();
+			os.write(bytes);
+			os.flush();
+			os.close();
+			if (conn.getResponseCode()==200) {
+				responseContent = Utils.getStringFromInputStream(conn.getInputStream());;
+				if (!TextUtils.isEmpty(responseContent)) {
 					map = (Map<String, Object>) GsonUtil.convertJson2Object(
-							strResponseContent, HashMap.class,
+							responseContent, HashMap.class,
 							GsonUtil.JSON_JAVABEAN);
 
 					if (Utils.doubleObjectToLong(map.get("code")) == 1) { // 服务器端处理成功
@@ -218,8 +206,8 @@ public class BreakPointUploadUtil {
 			e.printStackTrace();
 			retMap.put(CODE, STATUS_NETWORK_ERROR);
 		} finally {
-			if (httpclient != null && httpclient.getConnectionManager() != null) {
-				httpclient.getConnectionManager().shutdown();
+			if (conn != null) {
+				conn.disconnect();
 			}
 		}
 		return GsonUtil.convertObject2Json(retMap);
