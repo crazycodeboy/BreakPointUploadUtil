@@ -181,7 +181,7 @@ public class BreakPointUploadUtil {
 			os.flush();
 			os.close();
 			if (conn.getResponseCode()==200) {
-				responseContent = Utils.getStringFromInputStream(conn.getInputStream());;
+				responseContent = Utils.getStringFromInputStream(conn.getInputStream());
 				if (!TextUtils.isEmpty(responseContent)) {
 					map = (Map<String, Object>) GsonUtil.convertJson2Object(
 							responseContent, HashMap.class,
