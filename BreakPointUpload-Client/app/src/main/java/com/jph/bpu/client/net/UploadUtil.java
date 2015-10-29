@@ -38,7 +38,7 @@ public class UploadUtil extends AsyncTask<String, Integer, Object> {
     public UploadUtil(String localFilePath, RequestCallBack callBack) {
         this.localFilePath = localFilePath;
         this.callBack = callBack;
-        uploadUtil = new BreakPointUploadTool(callBack,mHandler);
+        uploadUtil = new BreakPointUploadTool(mHandler);
     }
 
     @Override
