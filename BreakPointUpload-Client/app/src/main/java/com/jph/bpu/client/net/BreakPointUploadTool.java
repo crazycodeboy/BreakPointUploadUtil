@@ -25,7 +25,7 @@ import java.net.URL;
  * 断点上传工具类
  *
  * @author JPH
- * @date 2015-5-8 下午7:03:25
+ * @date 2015-10-28 下午1:57:12
  */
 public class BreakPointUploadTool {
 	private final String TAG=BreakPointUploadTool.class.getSimpleName();
@@ -50,6 +50,8 @@ public class BreakPointUploadTool {
 	 * 上传文件
 	 * @param localFilePath 要上传文件的路径
 	 * @return
+	 * @author JPH
+	 * @date 2015-10-28 下午1:57:12
 	 */
 	public Object uploadFile(String localFilePath) {
 		ResultInfo resultInfo = getStartPoint(localFilePath, "pickup");// 向服务器获取要上传文件的起点信息
