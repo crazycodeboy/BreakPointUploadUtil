@@ -2,41 +2,23 @@ package com.jph.bpu.client.net;
 
 import android.os.Handler;
 import android.os.Message;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.jph.bpu.client.callback.RequestCallBack;
 import com.jph.bpu.client.entity.FailInfo;
+import com.jph.bpu.client.entity.ResultInfo;
 import com.jph.bpu.client.entity.SuccessInfo;
 import com.jph.bpu.client.entity.UpdateInfo;
 import com.jph.bpu.client.util.Constant;
 import com.jph.bpu.client.util.GsonUtil;
 import com.jph.bpu.client.util.Utils;
 
-//import org.apache.http.HttpEntity;
-//import org.apache.http.HttpResponse;
-//import org.apache.http.HttpStatus;
-//import org.apache.http.HttpVersion;
-//import org.apache.http.client.HttpClient;
-//import org.apache.http.client.methods.HttpGet;
-//import org.apache.http.client.methods.HttpPost;
-//import org.apache.http.entity.ByteArrayEntity;
-//import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.params.CoreConnectionPNames;
-//import org.apache.http.params.CoreProtocolPNames;
-//import org.apache.http.util.EntityUtils;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * 断点上传工具类
@@ -46,17 +28,16 @@ import java.util.Map;
  */
 public class BreakPointUploadTool {
 	private final String TAG=BreakPointUploadTool.class.getSimpleName();
-	public String CODE = "code";
-	/** 和服务器建立连接 **/
-	public int STATUS_SUCCESS = 0;
+	/**文件上传完成*/
+	private final int STATUS_SUCCESS= 0;
+	/**获取上传文件起点成功|本节点上传成功*/
+	private final int STATUS_CONTINUE = 1;
 	/** 网络异常 **/
-	public int STATUS_NETWORK_ERROR = 1;
+	private final int STATUS_NETWORK_ERROR = 3;
 	/** 获取数据失败 **/
-	public int STATUS_FETCHDATA_ERROR = 2;
-	/** 文件已存在 **/
-	public int STATUS_FILEISEXISTS = 3;
+	private final int STATUS_FETCHDATA_ERROR =4;
 	/** 分片大小 **/
-	private long lPiece = 1024 * 1024 * 10;
+	private long lPiece = 1024 * 1024 * 1;
 	/** 设置socket 超时时长为60s秒 **/
 	private final int SO_TIMEOUT = 60 * 1000;
 	private RequestCallBack callBack;
@@ -66,37 +47,27 @@ public class BreakPointUploadTool {
 		this.mHandler=mHandler;
 	}
 	public Object uploadFile(String localFilePath) {
-		String startInfo = getStartPos(localFilePath, "pickup");// 向服务器获取要上传文件的起点信息
-		Map<String, Object> tempMap = (Map<String, Object>) GsonUtil
-				.convertJson2Object(startInfo, HashMap.class,
-						GsonUtil.JSON_JAVABEAN);
-		long codeStr = Utils.doubleObjectToLong(tempMap.get("code"));// 返回状态码
-		if (codeStr != 0) {// 网络异常
-			Log.i(TAG, startInfo);
-			return new FailInfo("网络异常",localFilePath);
+		ResultInfo resultInfo = getStartPos(localFilePath, "pickup");// 向服务器获取要上传文件的起点信息
+		long codeResult = resultInfo.getCode();// 返回状态码
+		if (codeResult != 1) {// 网络异常
+			Log.i(TAG, resultInfo.toString());
+			return new FailInfo(resultInfo.getMsg(),localFilePath);
 		}
-		long strStart = Utils.doubleObjectToLong(tempMap.get("startsize"));// 起点位置
-		long strTot = Utils.doubleObjectToLong(tempMap.get("totsize"));// 总计大小
-		String saveName = (String) tempMap.get("savename");// 服务器保存的文件名
-		Log.i(TAG,"filename:" + saveName);
-		if (codeStr == 0) {// 获取起点位置成功
+		long fileSize =new File(localFilePath).length();// 总计大小
+		Log.i(TAG,"filename:" + resultInfo.getFileName());
+		if (codeResult == STATUS_CONTINUE) {// 获取起点位置成功
 			while (true) {
 				Log.i(TAG, "begin upload");
-				String uploadResult = upload(localFilePath,"pickup", saveName,
-						strStart, strTot);
-				Log.i(TAG,"上传返回值:" + uploadResult);
-				Map<String, Object> resultMap = (Map<String, Object>) GsonUtil
-						.convertJson2Object(uploadResult, HashMap.class,
-								GsonUtil.JSON_JAVABEAN);
-				strStart = Utils.doubleObjectToLong(resultMap.get("start"));
-				long uploadResultCode = Utils.doubleObjectToLong(resultMap
-						.get("code"));
-				if (uploadResultCode == 0) {// 本段上传完成
-					if (strStart == -1) {// 此文件的所有部分全部上传完成
+				ResultInfo uploadResult=upload(localFilePath,"pickup", resultInfo.getFileName(),
+						resultInfo.getStart(), fileSize);
+				resultInfo.setStart(uploadResult.getStart());
+				Log.i(TAG,"上传返回值:" + uploadResult.toString());
+				long start=uploadResult.getStart();
+				if (uploadResult.getCode() == STATUS_CONTINUE) {// 本段上传完成
+					if (start == -1) {// 此文件的所有部分全部上传完成
 						Log.i(TAG,"upload finished");
-//						if(!TextUtils.isEmpty((String) resultMap.get("path")))picture.setImgpath((String) resultMap.get("path"));//设置此图片在服务器上保存的路径
-						Log.i(TAG,"图片在服务器上保存的路径:"+resultMap.get("path"));
-						return new SuccessInfo(localFilePath, (String) resultMap.get("path"));
+						Log.i(TAG,"图片在服务器上保存的路径:"+uploadResult.getPath());
+						return new SuccessInfo(localFilePath, uploadResult.getPath());
 					} else {// 继续上传
 						Log.i(TAG,"continue upload");
 					}
@@ -121,10 +92,10 @@ public class BreakPointUploadTool {
 	 * @date 2015-4-28 下午1:57:12
 	 */
 	@SuppressWarnings("unchecked")
-	private String getStartPos(String localFilePath, String strModuleType) {
+	private ResultInfo getStartPos(String localFilePath, String strModuleType) {
+		ResultInfo resultInfo =null;
 		HttpURLConnection conn=null;
-		String responseContent = null;
-		Map<String, Object> resulMap = new HashMap<String, Object>();
+		String responseContent;
 		try {
 			File file = new File(localFilePath); // 初始化 File
 			String localFileName = file.getName();
@@ -140,37 +111,25 @@ public class BreakPointUploadTool {
 					.append(file.lastModified());
 			conn= (HttpURLConnection) new URL(sbUrl.toString()).openConnection();
 			if (conn.getResponseCode() ==200) {
-				responseContent = Utils.getStringFromInputStream(conn.getInputStream());;
-				if (!TextUtils.isEmpty(responseContent)) {
-					Map<String, Object> map = (Map<String, Object>) GsonUtil
-							.convertJson2Object(responseContent,
-									HashMap.class, GsonUtil.JSON_JAVABEAN);
-					if (Utils.doubleObjectToLong(map.get("code")) == 1) { // 服务器端处理成功
-						resulMap.put(CODE, STATUS_SUCCESS);
-						resulMap.put("savename", map.get("fileName"));
-						// resulMap.put("path", map.get("path"));
-						resulMap.put("startsize", map.get("start"));
-						resulMap.put("totsize", String.valueOf(file.length()));
-					} else {
-						resulMap.put(CODE, STATUS_FETCHDATA_ERROR);
-						resulMap.put("msg", map.get("msg"));
-					}
-				} else {
-					resulMap.put(CODE, STATUS_FETCHDATA_ERROR);
+				responseContent = Utils.getStringFromInputStream(conn.getInputStream());
+				resultInfo =(ResultInfo)GsonUtil.convertJson2Object(responseContent, ResultInfo.class, GsonUtil.JSON_JAVABEAN);
+				if (resultInfo==null) {
+					resultInfo.setCode(STATUS_FETCHDATA_ERROR);
 				}
 			} else {
-				resulMap.put(CODE, STATUS_NETWORK_ERROR);
+				resultInfo.setCode(STATUS_NETWORK_ERROR);
+				resultInfo.setMsg(Utils.getStringFromInputStream(conn.getErrorStream()));
 			}
-			file = null;
 		} catch (Exception e) {
 			e.printStackTrace();
-			resulMap.put(CODE, STATUS_NETWORK_ERROR);
+			resultInfo.setCode(STATUS_NETWORK_ERROR);
+			resultInfo.setMsg(e.toString());
 		} finally {
 			if (conn != null) {
 				conn.disconnect();
 			}
 		}
-		return GsonUtil.convertObject2Json(resulMap);
+		return resultInfo;
 	}
 
 	/**
@@ -191,12 +150,11 @@ public class BreakPointUploadTool {
 	 * @date 2015-4-28 下午2:12:34
 	 */
 	@SuppressWarnings("unchecked")
-	private String upload(String localFilePath, String strModuleType,
+	private ResultInfo upload(String localFilePath, String strModuleType,
 						 String strReturnFileName, long strStartSize, long strTotSize) {
+		ResultInfo result=new ResultInfo();
 		HttpURLConnection conn=null;
-		String responseContent = null;
-		Map<String, Object> map = null;
-		Map<String, Object> retMap = new HashMap<String, Object>();
+		String responseContent;
 		try {
 			StringBuffer sbUrl = new StringBuffer(Constant.strSerUrl);
 			sbUrl.append("upload?saveName=").append(strReturnFileName)
@@ -213,9 +171,9 @@ public class BreakPointUploadTool {
 			}
 
 			if (lStart == lTotSize) {
-				retMap.put("start", -1);
-				retMap.put(CODE, STATUS_SUCCESS);
-				return GsonUtil.convertObject2Json(retMap);
+				result.setStart(-1);
+				result.setCode(STATUS_SUCCESS);
+				return result;
 			}
 
 			String strRange = strStartSize + "-" + String.valueOf(lEnd) + "/"
@@ -225,38 +183,29 @@ public class BreakPointUploadTool {
 			conn.setRequestMethod("POST");
 			conn.setDoOutput(true);
 			conn.setRequestProperty("Content-type", "multipart/form-data;   boundary=---------------------------7d318fd100112");
+			conn.setRequestProperty("Connection", "Keep-Alive");
 			outPutData(conn,lEnd,lStart,localFilePath);
 			if (conn.getResponseCode()==200) {
 				responseContent = Utils.getStringFromInputStream(conn.getInputStream());
-				if (!TextUtils.isEmpty(responseContent)) {
-					map = (Map<String, Object>) GsonUtil.convertJson2Object(
-							responseContent, HashMap.class,
-							GsonUtil.JSON_JAVABEAN);
-
-					if (Utils.doubleObjectToLong(map.get("code")) == 1) { // 服务器端处理成功
-						retMap.put("path", map.get("path"));
-						retMap.put("start", map.get("start"));
-						retMap.put(CODE, STATUS_SUCCESS);
-					} else {
-						retMap.put(CODE, STATUS_FETCHDATA_ERROR);
-						retMap.put("msg", map.get("msg"));
-					}
-
-				} else {
-					retMap.put(CODE, STATUS_FETCHDATA_ERROR);
+				result = (ResultInfo) GsonUtil.convertJson2Object(responseContent, ResultInfo.class,GsonUtil.JSON_JAVABEAN);
+				if (result==null) {
+					result=new ResultInfo();
+					result.setCode(STATUS_FETCHDATA_ERROR);
 				}
 			} else {
-				retMap.put(CODE, STATUS_NETWORK_ERROR);
+				result.setCode(STATUS_NETWORK_ERROR);
+				result.setMsg(Utils.getStringFromInputStream(conn.getErrorStream()));
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
-			retMap.put(CODE, STATUS_NETWORK_ERROR);
+			result.setCode(STATUS_NETWORK_ERROR);
+			result.setMsg(e.toString());
 		} finally {
 			if (conn != null) {
 				conn.disconnect();
 			}
 		}
-		return GsonUtil.convertObject2Json(retMap);
+		return result;
 	}
 
 	private void outPutData(HttpURLConnection conn,long lEnd, long lStart, String localFilePath) throws IOException {
