@@ -57,6 +57,9 @@ public class BreakPointUploadTool {
 		}
 		long fileSize =new File(localFilePath).length();// 总计大小
 		Log.i(TAG,"filename:" + resultInfo.getFileName());
+		if (resultInfo.getStart()>=fileSize){
+			return new SuccessInfo(localFilePath, resultInfo.getPath());
+		}
 		if (codeResult == STATUS_CONTINUE) {// 获取起点位置成功
 			while (true) {
 				Log.i(TAG, "begin upload");
