@@ -1,5 +1,7 @@
 package com.jph.bpu.client.net;
 
+import android.annotation.TargetApi;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
@@ -37,7 +39,7 @@ public class BreakPointUploadTool {
 	/** 获取数据失败 **/
 	private final int STATUS_FETCHDATA_ERROR =4;
 	/** 分片大小 **/
-	private long lPiece = 1024 * 1024 * 1;
+	private long lPiece = 1024 * 1024 * 10;
 	/** 设置socket 超时时长为60s秒 **/
 	private final int SO_TIMEOUT = 60 * 1000;
 	private RequestCallBack callBack;
@@ -149,6 +151,7 @@ public class BreakPointUploadTool {
 	 * @author JPH
 	 * @date 2015-4-28 下午2:12:34
 	 */
+	@TargetApi(Build.VERSION_CODES.KITKAT)
 	@SuppressWarnings("unchecked")
 	private ResultInfo upload(String localFilePath, String strModuleType,
 						 String strReturnFileName, long strStartSize, long strTotSize) {
@@ -184,6 +187,8 @@ public class BreakPointUploadTool {
 			conn.setDoOutput(true);
 			conn.setRequestProperty("Content-type", "multipart/form-data;   boundary=---------------------------7d318fd100112");
 			conn.setRequestProperty("Connection", "Keep-Alive");
+			conn.setFixedLengthStreamingMode(lEnd - lStart);//上传数据的大小，需要设置，否则禁掉缓存无效
+			conn.setUseCaches(false);//禁掉缓存
 			outPutData(conn,lEnd,lStart,localFilePath);
 			if (conn.getResponseCode()==200) {
 				responseContent = Utils.getStringFromInputStream(conn.getInputStream());
