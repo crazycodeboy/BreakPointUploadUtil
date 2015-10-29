@@ -270,18 +270,20 @@ public class BreakPointUploadTool {
 		byte[] buffer = new byte[bufferLen];
 		int count= (int) ((lEnd - lStart)/bufferLen);
 		for(int i=0;i<count;i++) {
-			if (completeSize>=lEnd)break;
+//			if (completeSize>=lEnd)break;
 			raf.read(buffer, 0, bufferLen);
 			os.write(buffer);
 			completeSize+=bufferLen;
 			sendUpdateMessage(fileSize,completeSize);
 		}
 		int lastBufferLen=(int) (lEnd-completeSize);
-		byte[] lastBuffer=new byte[lastBufferLen];
-		raf.read(lastBuffer ,0, lastBufferLen);
-		os.write(lastBuffer);
-		completeSize+=lastBufferLen;
-		sendUpdateMessage(fileSize,completeSize);
+		if(lastBufferLen>0){
+			byte[] lastBuffer=new byte[lastBufferLen];
+			raf.read(lastBuffer ,0, lastBufferLen);
+			os.write(lastBuffer);
+			completeSize+=lastBufferLen;
+			sendUpdateMessage(fileSize,completeSize);
+		}
 		raf.close();
 		os.flush();
 		os.close();
