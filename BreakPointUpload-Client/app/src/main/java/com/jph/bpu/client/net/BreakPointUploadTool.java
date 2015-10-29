@@ -98,7 +98,7 @@ public class BreakPointUploadTool {
 	 *         "/home/software/ftp/pic/2015/04/dir/351f0914cb1161e2f40b5f50dc23c955.zip"
 	 *         ,"fileName":"351f0914cb1161e2f40b5f50dc23c955.zip","code":1}
 	 * @author JPH
-	 * @date 2015-4-28 下午1:57:12
+	 * @date 2015-10-28 下午1:57:12
 	 */
 	private ResultInfo getStartPoint(String localFilePath, String moduleType) {
 		ResultInfo resultInfo =new ResultInfo();
@@ -156,7 +156,7 @@ public class BreakPointUploadTool {
 	 *            文件总大小 234433(字节)
 	 * @return {"code":"0","start":-1}code=0表示连接服务器成功，start=-1 表示上传完成
 	 * @author JPH
-	 * @date 2015-4-28 下午2:12:34
+	 * @date 2015-10-28 下午2:12:34
 	 */
 	@TargetApi(Build.VERSION_CODES.KITKAT)
 	@SuppressWarnings("unchecked")
