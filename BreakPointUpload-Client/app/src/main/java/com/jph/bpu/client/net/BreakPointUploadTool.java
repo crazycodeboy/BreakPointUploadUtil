@@ -98,7 +98,7 @@ public class BreakPointUploadTool {
 	 */
 	@SuppressWarnings("unchecked")
 	private ResultInfo getStartPos(String localFilePath, String strModuleType) {
-		ResultInfo resultInfo =null;
+		ResultInfo resultInfo =new ResultInfo();
 		HttpURLConnection conn=null;
 		String responseContent;
 		try {
@@ -119,6 +119,7 @@ public class BreakPointUploadTool {
 				responseContent = Utils.getStringFromInputStream(conn.getInputStream());
 				resultInfo =(ResultInfo)GsonUtil.convertJson2Object(responseContent, ResultInfo.class, GsonUtil.JSON_JAVABEAN);
 				if (resultInfo==null) {
+					resultInfo=new ResultInfo();
 					resultInfo.setCode(STATUS_FETCHDATA_ERROR);
 				}
 			} else {
