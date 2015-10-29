@@ -11,18 +11,21 @@ import com.jph.bpu.client.entity.FailInfo;
 import com.jph.bpu.client.entity.SuccessInfo;
 import com.jph.bpu.client.entity.UpdateInfo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 断点续传工具类
  *
  * @author JPH
  * @date 2015-5-8 下午7:06:06
  */
-public class UploadUtil extends AsyncTask<String, Integer, Object> {
+public class UploadUtil extends AsyncTask<String, Integer, ArrayList> {
     public final static int WHAT_UPDATE = 0;
     private final String TAG = UploadUtil.class.getSimpleName();
-    private String localFilePath;
     private RequestCallBack callBack;
     private BreakPointUploadTool uploadUtil;
+    private ArrayList<String> localFilePaths;
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
         @Override
@@ -35,8 +38,14 @@ public class UploadUtil extends AsyncTask<String, Integer, Object> {
             }
         }
     };
+
     public UploadUtil(String localFilePath, RequestCallBack callBack) {
-        this.localFilePath = localFilePath;
+        this(new ArrayList<String>(1), callBack);
+        localFilePaths.add(localFilePath);
+    }
+
+    public UploadUtil(ArrayList<String> localFiles, RequestCallBack callBack) {
+        this.localFilePaths = localFiles;
         this.callBack = callBack;
         uploadUtil = new BreakPointUploadTool(mHandler);
     }
@@ -48,8 +57,12 @@ public class UploadUtil extends AsyncTask<String, Integer, Object> {
     }
 
     @Override
-    protected Object doInBackground(String... params) {
-        return uploadUtil.uploadFile(localFilePath);
+    protected ArrayList doInBackground(String... params) {
+        ArrayList results = new ArrayList<>();
+        for (String path : localFilePaths) {
+            results.add(uploadUtil.uploadFile(path));
+        }
+        return results;
     }
 
     @Override
@@ -57,13 +70,17 @@ public class UploadUtil extends AsyncTask<String, Integer, Object> {
     }
 
     @Override
-    protected void onPostExecute(Object result) {// 执行结果
-        Log.i(TAG, "result:" + result);
-        super.onPostExecute(result);
-        if (result instanceof FailInfo) {
-            callBack.onFailure((FailInfo) result);
-        } else {
-            callBack.onSuccess((SuccessInfo) result);
+    protected void onPostExecute(ArrayList results) {// 执行结果
+        super.onPostExecute(results);
+        for (int i=0;i<results.size();i++){
+            boolean isLast=false;
+            if (i==results.size()-1)isLast=true;
+            Object result=results.get(i);
+            if (result instanceof FailInfo) {
+                callBack.onFailure((FailInfo) result,isLast);
+            } else {
+                callBack.onSuccess((SuccessInfo) result,isLast);
+            }
         }
     }
 }

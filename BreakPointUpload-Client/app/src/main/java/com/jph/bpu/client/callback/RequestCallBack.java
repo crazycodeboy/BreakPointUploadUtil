@@ -10,6 +10,6 @@ import com.jph.bpu.client.entity.SuccessInfo;
 public interface RequestCallBack {
     void onStart();
     void onLoading(long total, long current, boolean isUploading);
-    void onSuccess(SuccessInfo info);
-    void onFailure(FailInfo error);
+    void onSuccess(SuccessInfo info,boolean isLast);
+    void onFailure(FailInfo error,boolean isLast);
 }

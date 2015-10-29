@@ -13,6 +13,8 @@ import com.jph.bpu.client.entity.FailInfo;
 import com.jph.bpu.client.entity.SuccessInfo;
 import com.jph.bpu.client.net.UploadUtil;
 
+import java.util.ArrayList;
+
 import static com.jph.bpu.client.R.id.progressBar;
 
 public class MainActivity extends Activity {
@@ -30,7 +32,11 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View v) {
                 String filePath=Environment.getExternalStorageDirectory().getPath()+"/456.png";
-               new UploadUtil(filePath, new RequestCallBack() {
+                String filePath2=Environment.getExternalStorageDirectory().getPath()+"/test.jpg";
+                ArrayList files=new ArrayList();
+                files.add(filePath2);
+                files.add(filePath);
+               new UploadUtil(files, new RequestCallBack() {
                    @Override
                    public void onStart() {
                        progressBar.setMax(100);
@@ -41,15 +47,14 @@ public class MainActivity extends Activity {
                        progressBar.setProgress(progress);
                        textView.setText("total:"+total+" current:"+current+"\n"+progress+"%");
                    }
-
                    @Override
-                   public void onSuccess(SuccessInfo info) {
-                       textView.setText("上传完成：上传文件的本地路径："+info.getLocalPath()+"\n服务器路径："+info.getNetPath());
+                   public void onSuccess(SuccessInfo info,boolean isLast) {
+                       textView.setText("上传完成：上传文件的本地路径："+info.getLocalPath()+"\n服务器路径："+info.getNetPath()+"\nisLast:"+isLast);
                    }
 
                    @Override
-                   public void onFailure(FailInfo error) {
-                       textView.setText("上传失败：上传文件的本地路径："+error.getLocalPath());
+                   public void onFailure(FailInfo error,boolean isLast) {
+                       textView.setText("上传失败：上传文件的本地路径："+error.getLocalPath()+"\nisLast:"+isLast);
                    }
                }).execute();
             }
