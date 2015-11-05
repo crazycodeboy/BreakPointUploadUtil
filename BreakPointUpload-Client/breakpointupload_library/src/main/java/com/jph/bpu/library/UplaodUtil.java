@@ -1,8 +1,10 @@
 package com.jph.bpu.library;
 
 import com.jph.bpu.library.callback.RequestCallBack;
+import com.jph.bpu.library.entity.FileBody;
 import com.jph.bpu.library.upload.UploadHandler;
 
+import java.io.File;
 import java.util.ArrayList;
 
 /**
@@ -16,21 +18,23 @@ public class UplaodUtil {
 
     /**
      * 上传单个文件
-     * @param localFilePath 上传文件的本地路径
+     * @param fileBody 要上文件FileBody的实体
+     * @param serverUrl 服务器路径
      * @param callBack
      */
-    public void upload(String localFilePath, RequestCallBack callBack) {
-        handler=new UploadHandler(localFilePath,callBack);
+    public void upload(FileBody fileBody,String serverUrl, RequestCallBack callBack) {
+        handler=new UploadHandler(fileBody,serverUrl,callBack);
         handler.execute();
     }
 
     /**
      * 批量上传文件
-     * @param localFiles 要上文件的本地路径的集合
+     * @param fileBodies 要上文件FileBody的实体集合
+     * @param serverUrl 服务器路径
      * @param callBack
      */
-    public void upload(ArrayList<String> localFiles, RequestCallBack callBack) {
-        handler=new UploadHandler(localFiles,callBack);
+    public void upload(ArrayList<FileBody>fileBodies,String serverUrl, RequestCallBack callBack) {
+        handler=new UploadHandler(fileBodies,serverUrl,callBack);
         handler.execute();
     }
 }

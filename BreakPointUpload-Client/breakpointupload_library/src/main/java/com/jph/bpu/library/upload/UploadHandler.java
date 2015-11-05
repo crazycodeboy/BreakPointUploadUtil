@@ -7,9 +7,11 @@ import android.os.Message;
 
 import com.jph.bpu.library.callback.RequestCallBack;
 import com.jph.bpu.library.entity.FailInfo;
+import com.jph.bpu.library.entity.FileBody;
 import com.jph.bpu.library.entity.SuccessInfo;
 import com.jph.bpu.library.entity.UpdateInfo;
 
+import java.io.File;
 import java.util.ArrayList;
 
 /**
@@ -23,7 +25,7 @@ public class UploadHandler extends AsyncTask<String, Integer, ArrayList> {
     private final String TAG = UploadHandler.class.getSimpleName();
     private RequestCallBack callBack;
     private BreakPointUploadTool uploadUtil;
-    private ArrayList<String> localFilePaths;
+    private ArrayList<FileBody> fileBodies;
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
         @Override
@@ -37,15 +39,15 @@ public class UploadHandler extends AsyncTask<String, Integer, ArrayList> {
         }
     };
 
-    public UploadHandler(String localFilePath, RequestCallBack callBack) {
-        this(new ArrayList<String>(1), callBack);
-        localFilePaths.add(localFilePath);
+    public UploadHandler(FileBody fileBody, String serverUrl,RequestCallBack callBack) {
+        this(new ArrayList<FileBody>(1),serverUrl,callBack);
+        fileBodies.add(fileBody);
     }
 
-    public UploadHandler(ArrayList<String> localFiles, RequestCallBack callBack) {
-        this.localFilePaths = localFiles;
+    public UploadHandler(ArrayList<FileBody> fileBodies,String serverUrl, RequestCallBack callBack) {
+        this.fileBodies = fileBodies;
         this.callBack = callBack;
-        uploadUtil = new BreakPointUploadTool(mHandler);
+        uploadUtil = new BreakPointUploadTool(mHandler,serverUrl);
     }
 
     @Override
@@ -57,8 +59,8 @@ public class UploadHandler extends AsyncTask<String, Integer, ArrayList> {
     @Override
     protected ArrayList doInBackground(String... params) {
         ArrayList results = new ArrayList<>();
-        for (String path : localFilePaths) {
-            results.add(uploadUtil.uploadFile(path));
+        for (FileBody fileBody: fileBodies) {
+            results.add(uploadUtil.uploadFile(addExtra(fileBody)));
         }
         return results;
     }
@@ -80,5 +82,9 @@ public class UploadHandler extends AsyncTask<String, Integer, ArrayList> {
                 callBack.onSuccess((SuccessInfo) result,isLast);
             }
         }
+    }
+    private FileBody addExtra(FileBody fileBody){
+        fileBody.setFileSize(new File(fileBody.getLocalFilePath()).length());
+        return fileBody;
     }
 }

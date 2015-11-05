@@ -8,9 +8,11 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.jph.bpu.client.util.Constant;
 import com.jph.bpu.library.UplaodUtil;
 import com.jph.bpu.library.callback.RequestCallBack;
 import com.jph.bpu.library.entity.FailInfo;
+import com.jph.bpu.library.entity.FileBody;
 import com.jph.bpu.library.entity.SuccessInfo;
 
 import java.util.ArrayList;
@@ -37,14 +39,14 @@ public class MainActivity extends Activity {
                 String filePath6=Environment.getExternalStorageDirectory().getPath()+"/2.jpg";
                 String filePath7=Environment.getExternalStorageDirectory().getPath()+"/3.jpg";
                 ArrayList files=new ArrayList();
-                files.add(filePath5);
-                files.add(filePath6);
-                files.add(filePath7);
-                files.add(filePath2);
-                files.add(filePath3);
-                files.add(filePath4);
-                files.add(filePath);
-                new UplaodUtil().upload(files, new RequestCallBack() {
+                files.add(new FileBody(filePath2,"pickup"));
+                files.add(new FileBody(filePath3,"pickup"));
+                files.add(new FileBody(filePath4,"pickup"));
+                files.add(new FileBody(filePath5,"pickup"));
+                files.add(new FileBody(filePath6,"pickup"));
+                files.add(new FileBody(filePath7,"pickup"));
+                files.add(new FileBody(filePath,"pickup"));
+                new UplaodUtil().upload(files, Constant.strSerUrl, new RequestCallBack() {
                     @Override
                     public void onStart() {
                         progressBar.setMax(100);

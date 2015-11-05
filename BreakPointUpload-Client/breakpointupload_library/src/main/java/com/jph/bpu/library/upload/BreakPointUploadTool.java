@@ -7,10 +7,10 @@ import android.os.Message;
 import android.util.Log;
 
 import com.jph.bpu.library.entity.FailInfo;
+import com.jph.bpu.library.entity.FileBody;
 import com.jph.bpu.library.entity.ResultInfo;
 import com.jph.bpu.library.entity.SuccessInfo;
 import com.jph.bpu.library.entity.UpdateInfo;
-import com.jph.bpu.library.util.Constant;
 import com.jph.bpu.library.util.GsonUtil;
 import com.jph.bpu.library.util.Utils;
 
@@ -42,80 +42,79 @@ public class BreakPointUploadTool {
 	/** 设置socket 超时时长为60s秒 **/
 	private final int SO_TIMEOUT = 60 * 1000;
 	private Handler mHandler;
-	public BreakPointUploadTool(Handler mHandler) {
+	private String serverUrl;
+	public BreakPointUploadTool(Handler mHandler,String serverUrl) {
 		this.mHandler=mHandler;
+		this.serverUrl=serverUrl;
 	}
 
 	/**
 	 * 上传文件
-	 * @param localFilePath 要上传文件的路径
+	 * @param fileBody 要上传文件的实体类
 	 * @return
 	 * @author JPH
 	 * @date 2015-10-28 下午1:57:12
 	 */
-	public Object uploadFile(String localFilePath) {
-		ResultInfo resultInfo = getStartPoint(localFilePath, "pickup");// 向服务器获取要上传文件的起点信息
+	public Object uploadFile(FileBody fileBody) {
+		ResultInfo resultInfo = getStartPoint(fileBody);// 向服务器获取要上传文件的起点信息
 		long codeResult = resultInfo.getCode();// 返回状态码
 		if (codeResult != 1) {// 网络异常
 			Log.i(TAG, resultInfo.toString());
-			return new FailInfo(resultInfo.getMsg(),localFilePath);
+			return new FailInfo(resultInfo.getMsg(),fileBody.getLocalFilePath());
 		}
-		long fileSize =new File(localFilePath).length();// 总计大小
+//		long fileSize =new File(fileBody.getLocalFilePath()).length();// 总计大小
 		Log.i(TAG,"filename:" + resultInfo.getFileName());
-		if (resultInfo.getStart()>=fileSize){
-			return new SuccessInfo(localFilePath, resultInfo.getPath());
+		if (resultInfo.getStart()>=fileBody.getFileSize()){
+			return new SuccessInfo(fileBody.getLocalFilePath(), resultInfo.getPath());
 		}
 		if (codeResult == STATUS_CONTINUE) {// 获取起点位置成功
 			while (true) {
 				Log.i(TAG, "------begin upload-------");
-				ResultInfo uploadResult=upload(localFilePath,"pickup", resultInfo.getFileName(),
-						resultInfo.getStart(), fileSize);
+				ResultInfo uploadResult=upload(fileBody.getLocalFilePath(),fileBody.getModuleType(), resultInfo.getFileName(),
+						resultInfo.getStart(), fileBody.getFileSize());
 				resultInfo.setStart(uploadResult.getStart());
 				Log.i(TAG,"上传返回值:" + uploadResult.toString());
 				long start=uploadResult.getStart();
 				if (uploadResult.getCode() == STATUS_CONTINUE) {// 本段上传完成
 					if (start == -1) {// 此文件的所有部分全部上传完成
 						Log.i(TAG,"------upload finished------\n图片在服务器上保存的路径:"+uploadResult.getPath());
-						return new SuccessInfo(localFilePath, uploadResult.getPath());
+						return new SuccessInfo(fileBody.getLocalFilePath(), uploadResult.getPath());
 					} else {// 继续上传
 						Log.i(TAG,"-------continue upload--------");
 					}
 				} else {// 上传失败
-					return new FailInfo(uploadResult.getMsg(),localFilePath);
+					return new FailInfo(uploadResult.getMsg(),fileBody.getLocalFilePath());
 				}
 			}
 		}
-		return new FailInfo("未知异常",localFilePath);
+		return new FailInfo("未知异常",fileBody.getLocalFilePath());
 	}
 	/**
 	 * 获取上传起始点
 	 *
-	 * @param localFilePath
-	 *            本地文件路径
-	 * @param moduleType
-	 *            要将文件上传到的文件名（模块名 id,sign,image,jzimage,pickup）
+	 * @param fileBody 上传文件的实体类
 	 * @return 如：{"start":8338974,"path":
 	 *         "/home/software/ftp/pic/2015/04/dir/351f0914cb1161e2f40b5f50dc23c955.zip"
 	 *         ,"fileName":"351f0914cb1161e2f40b5f50dc23c955.zip","code":1}
 	 * @author JPH
 	 * @date 2015-10-28 下午1:57:12
 	 */
-	private ResultInfo getStartPoint(String localFilePath, String moduleType) {
+	private ResultInfo getStartPoint(FileBody fileBody) {
 		ResultInfo resultInfo =new ResultInfo();
 		HttpURLConnection conn=null;
 		String responseContent;
 		try {
-			File file = new File(localFilePath); // 初始化 File
+			File file = new File(fileBody.getLocalFilePath()); // 初始化 File
 			String localFileName = file.getName();
-			StringBuffer sbUrl = new StringBuffer(Constant.strSerUrl);
+			StringBuffer sbUrl = new StringBuffer(serverUrl);
 			sbUrl.append("upload?name=")
 					.append(localFileName)
 					.append("&dirtype=")
-					.append(moduleType)
+					.append(fileBody.getModuleType())
 					.append("&type=")
 					.append(localFileName.substring(localFileName
 							.lastIndexOf('.') + 1)).append("&size=")
-					.append(file.length()).append("&modified=")
+					.append(fileBody.getFileSize()).append("&modified=")
 					.append(file.lastModified());
 			conn= (HttpURLConnection) new URL(sbUrl.toString()).openConnection();
 			if (conn.getResponseCode() ==200) {
@@ -166,7 +165,7 @@ public class BreakPointUploadTool {
 		HttpURLConnection conn=null;
 		String responseContent;
 		try {
-			StringBuffer sbUrl = new StringBuffer(Constant.strSerUrl);
+			StringBuffer sbUrl = new StringBuffer(serverUrl);
 			sbUrl.append("upload?saveName=").append(returnFileName)
 					.append("&dirtype=").append(moduleType);
 			conn= (HttpURLConnection) new URL(sbUrl.toString()).openConnection();
