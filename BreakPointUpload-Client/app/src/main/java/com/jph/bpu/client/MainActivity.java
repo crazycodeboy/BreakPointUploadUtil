@@ -33,30 +33,40 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 String filePath=Environment.getExternalStorageDirectory().getPath()+"/456.png";
                 String filePath2=Environment.getExternalStorageDirectory().getPath()+"/test.jpg";
+                String filePath3=Environment.getExternalStorageDirectory().getPath()+"/123.jpg";
+                String filePath4=Environment.getExternalStorageDirectory().getPath()+"/888.jpg";
+                String filePath5=Environment.getExternalStorageDirectory().getPath()+"/1.jpg";
+                String filePath6=Environment.getExternalStorageDirectory().getPath()+"/2.jpg";
+                String filePath7=Environment.getExternalStorageDirectory().getPath()+"/3.jpg";
                 ArrayList files=new ArrayList();
+                files.add(filePath5);
+                files.add(filePath6);
+                files.add(filePath7);
                 files.add(filePath2);
+                files.add(filePath3);
+                files.add(filePath4);
                 files.add(filePath);
-               new UploadUtil(files, new RequestCallBack() {
-                   @Override
-                   public void onStart() {
-                       progressBar.setMax(100);
-                   }
-                   @Override
-                   public void onLoading(long total, long current, boolean isUploading) {
-                       int progress=(int) ((current *1.0 /total)*100);
-                       progressBar.setProgress(progress);
-                       textView.setText("total:"+total+" current:"+current+"\n"+progress+"%");
-                   }
-                   @Override
-                   public void onSuccess(SuccessInfo info,boolean isLast) {
-                       textView.setText("上传完成：上传文件的本地路径："+info.getLocalPath()+"\n服务器路径："+info.getNetPath()+"\nisLast:"+isLast);
-                   }
+                new UploadUtil(files, new RequestCallBack() {
+                    @Override
+                    public void onStart() {
+                        progressBar.setMax(100);
+                    }
+                    @Override
+                    public void onLoading(long total, long current, boolean isUploading) {
+                        int progress=(int) ((current *1.0 /total)*100);
+                        progressBar.setProgress(progress);
+                        textView.setText("total:"+total+" current:"+current+"\n"+progress+"%");
+                    }
+                    @Override
+                    public void onSuccess(SuccessInfo info,boolean isLast) {
+                        textView.setText("上传完成：上传文件的本地路径："+info.getLocalPath()+"\n服务器路径："+info.getNetPath()+"\nisLast:"+isLast);
+                    }
 
-                   @Override
-                   public void onFailure(FailInfo error,boolean isLast) {
-                       textView.setText("上传失败：上传文件的本地路径："+error.getLocalPath()+"\nisLast:"+isLast);
-                   }
-               }).execute();
+                    @Override
+                    public void onFailure(FailInfo error,boolean isLast) {
+                        textView.setText("上传失败：上传文件的本地路径："+error.getLocalPath()+"\nisLast:"+isLast);
+                    }
+                }).execute();
             }
         });
     }
