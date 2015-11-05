@@ -8,10 +8,10 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.jph.bpu.client.callback.RequestCallBack;
-import com.jph.bpu.client.entity.FailInfo;
-import com.jph.bpu.client.entity.SuccessInfo;
-import com.jph.bpu.client.upload.UploadHandler;
+import com.jph.bpu.library.UplaodUtil;
+import com.jph.bpu.library.callback.RequestCallBack;
+import com.jph.bpu.library.entity.FailInfo;
+import com.jph.bpu.library.entity.SuccessInfo;
 
 import java.util.ArrayList;
 
@@ -49,20 +49,22 @@ public class MainActivity extends Activity {
                     public void onStart() {
                         progressBar.setMax(100);
                     }
+
                     @Override
                     public void onLoading(long total, long current, boolean isUploading) {
-                        int progress=(int) ((current *1.0 /total)*100);
+                        int progress = (int) ((current * 1.0 / total) * 100);
                         progressBar.setProgress(progress);
-                        textView.setText("total:"+total+" current:"+current+"\n"+progress+"%");
-                    }
-                    @Override
-                    public void onSuccess(SuccessInfo info,boolean isLast) {
-                        textView.setText("上传完成：上传文件的本地路径："+info.getLocalPath()+"\n服务器路径："+info.getNetPath()+"\nisLast:"+isLast);
+                        textView.setText("total:" + total + " current:" + current + "\n" + progress + "%");
                     }
 
                     @Override
-                    public void onFailure(FailInfo error,boolean isLast) {
-                        textView.setText("上传失败：上传文件的本地路径："+error.getLocalPath()+"\nisLast:"+isLast);
+                    public void onSuccess(SuccessInfo info, boolean isLast) {
+                        textView.setText("上传完成：上传文件的本地路径：" + info.getLocalPath() + "\n服务器路径：" + info.getNetPath() + "\nisLast:" + isLast);
+                    }
+
+                    @Override
+                    public void onFailure(FailInfo error, boolean isLast) {
+                        textView.setText("上传失败：上传文件的本地路径：" + error.getLocalPath() + "\nisLast:" + isLast);
                     }
                 });
             }
