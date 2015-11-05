@@ -1,4 +1,4 @@
-package com.jph.bpu.client.net;
+package com.jph.bpu.client.upload;
 
 import android.annotation.TargetApi;
 import android.os.Build;
@@ -249,7 +249,7 @@ public class BreakPointUploadTool {
 	 */
 	private void sendUpdateMessage(long fileSize,long completeSize){
 		Message msg=Message.obtain();
-		msg.what=UploadUtil.WHAT_UPDATE;
+		msg.what= UploadHandler.WHAT_UPDATE;
 		msg.obj=new UpdateInfo(fileSize,completeSize,true);
 		mHandler.sendMessage(msg);
 	}

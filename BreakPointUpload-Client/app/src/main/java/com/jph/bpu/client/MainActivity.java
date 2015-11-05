@@ -11,11 +11,9 @@ import android.widget.TextView;
 import com.jph.bpu.client.callback.RequestCallBack;
 import com.jph.bpu.client.entity.FailInfo;
 import com.jph.bpu.client.entity.SuccessInfo;
-import com.jph.bpu.client.net.UploadUtil;
+import com.jph.bpu.client.upload.UploadHandler;
 
 import java.util.ArrayList;
-
-import static com.jph.bpu.client.R.id.progressBar;
 
 public class MainActivity extends Activity {
     TextView textView;
@@ -46,7 +44,7 @@ public class MainActivity extends Activity {
                 files.add(filePath3);
                 files.add(filePath4);
                 files.add(filePath);
-                new UploadUtil(files, new RequestCallBack() {
+                new UplaodUtil().upload(files, new RequestCallBack() {
                     @Override
                     public void onStart() {
                         progressBar.setMax(100);
@@ -66,7 +64,7 @@ public class MainActivity extends Activity {
                     public void onFailure(FailInfo error,boolean isLast) {
                         textView.setText("上传失败：上传文件的本地路径："+error.getLocalPath()+"\nisLast:"+isLast);
                     }
-                }).execute();
+                });
             }
         });
     }

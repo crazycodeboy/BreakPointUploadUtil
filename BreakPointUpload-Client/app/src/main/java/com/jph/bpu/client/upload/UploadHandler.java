@@ -1,10 +1,9 @@
-package com.jph.bpu.client.net;
+package com.jph.bpu.client.upload;
 
 import android.annotation.SuppressLint;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.os.Message;
-import android.util.Log;
 
 import com.jph.bpu.client.callback.RequestCallBack;
 import com.jph.bpu.client.entity.FailInfo;
@@ -12,7 +11,6 @@ import com.jph.bpu.client.entity.SuccessInfo;
 import com.jph.bpu.client.entity.UpdateInfo;
 
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * 断点续传工具类
@@ -20,9 +18,9 @@ import java.util.List;
  * @author JPH
  * @date 2015-5-8 下午7:06:06
  */
-public class UploadUtil extends AsyncTask<String, Integer, ArrayList> {
+public class UploadHandler extends AsyncTask<String, Integer, ArrayList> {
     public final static int WHAT_UPDATE = 0;
-    private final String TAG = UploadUtil.class.getSimpleName();
+    private final String TAG = UploadHandler.class.getSimpleName();
     private RequestCallBack callBack;
     private BreakPointUploadTool uploadUtil;
     private ArrayList<String> localFilePaths;
@@ -39,12 +37,12 @@ public class UploadUtil extends AsyncTask<String, Integer, ArrayList> {
         }
     };
 
-    public UploadUtil(String localFilePath, RequestCallBack callBack) {
+    public UploadHandler(String localFilePath, RequestCallBack callBack) {
         this(new ArrayList<String>(1), callBack);
         localFilePaths.add(localFilePath);
     }
 
-    public UploadUtil(ArrayList<String> localFiles, RequestCallBack callBack) {
+    public UploadHandler(ArrayList<String> localFiles, RequestCallBack callBack) {
         this.localFilePaths = localFiles;
         this.callBack = callBack;
         uploadUtil = new BreakPointUploadTool(mHandler);
