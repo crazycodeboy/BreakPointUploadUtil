@@ -44,8 +44,8 @@ public class UploadHandler extends AsyncTask<String, Integer, ArrayList> {
         fileBodies.add(fileBody);
     }
 
-    public UploadHandler(ArrayList<FileBody> fileBodies,String serverUrl, RequestCallBack callBack) {
-        this.fileBodies = fileBodies;
+    public UploadHandler(ArrayList<?extends FileBody> fileBodies,String serverUrl, RequestCallBack callBack) {
+        this.fileBodies = (ArrayList<FileBody>) fileBodies;
         this.callBack = callBack;
         uploadUtil = new BreakPointUploadTool(mHandler,serverUrl);
     }

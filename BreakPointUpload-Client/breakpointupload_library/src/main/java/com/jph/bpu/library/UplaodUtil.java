@@ -33,7 +33,7 @@ public class UplaodUtil {
      * @param serverUrl 服务器路径
      * @param callBack
      */
-    public void upload(ArrayList<FileBody>fileBodies,String serverUrl, RequestCallBack callBack) {
+    public void upload(ArrayList<?extends FileBody>fileBodies,String serverUrl, RequestCallBack callBack) {
         handler=new UploadHandler(fileBodies,serverUrl,callBack);
         handler.execute();
     }
