@@ -14,6 +14,9 @@ public class FileBody {
     //文件大小
     private long fileSize;
 
+    public FileBody() {
+    }
+
     public FileBody(String localFilePath, String moduleType) {
         this.localFilePath = localFilePath;
         this.moduleType = moduleType;
